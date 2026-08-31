@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AI 全球情报雷达</title>
+  <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="icons/icon.svg" alt="">
+        <div><strong>AI 全球雷达</strong><span>Global AI Intelligence</span></div>
+      </div>
+      <nav id="sidebarNav" aria-label="主要导航"></nav>
+      <div class="sidebar-bottom">
+        <div class="sync-card">
+          <div class="sync-dot" id="syncDot"></div>
+          <div><strong id="syncLabel">等待首次同步</strong><span id="syncTime">每2小时更新</span></div>
+        </div>
+        <button class="primary-button full" id="syncButton">立即更新</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">GLOBAL AI INTELLIGENCE</p>
+          <h1 id="pageTitle">AI更新迭代</h1>
+          <p id="pageDescription">追踪全球 AI 公司、模型、产品和开源项目的重要变化。</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="budget-chip" title="DeepSeek 月度预算">
+            <span>本月 AI</span><strong id="budgetText">¥0.00 / ¥10</strong>
+            <i><b id="budgetBar"></b></i>
+          </div>
+          <button class="icon-button" id="notificationButton" title="通知">🔔<span id="notificationCount" hidden>0</span></button>
+        </div>
+      </header>
+
+      <section class="stats-grid" id="statsGrid"></section>
+
+      <section class="toolbar" id="toolbar">
+        <label class="search-box">
+          <span>⌕</span>
+          <input id="searchInput" type="search" placeholder="搜索标题、摘要、来源或主题">
+        </label>
+        <select id="topicFilter" aria-label="主题筛选"><option value="">全部主题</option></select>
+        <select id="sourceFilter" aria-label="来源筛选"><option value="">全部来源</option></select>
+        <select id="timeFilter" aria-label="时间筛选">
+          <option value="">全部时间</option>
+          <option value="1">最近24小时</option>
+          <option value="7">最近7天</option>
+          <option value="30">最近30天</option>
+        </select>
+        <select id="dimensionFilter" aria-label="分类筛选"><option value="">全部分类</option></select>
+        <select id="statusFilter" aria-label="状态筛选">
+          <option value="">全部状态</option>
+          <option value="confirmed">已确认</option>
+          <option value="pending">待验证</option>
+          <option value="unread">未读</option>
+          <option value="saved">已收藏</option>
+        </select>
+        <select id="sortSelect" aria-label="排序">
+          <option value="latest">最新发布</option>
+          <option value="heat">热度最高</option>
+          <option value="importance">重要程度</option>
+        </select>
+      </section>
+
+      <section id="viewContent" class="view-content" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <aside class="detail-drawer" id="detailDrawer" aria-hidden="true">
+    <button class="drawer-close" id="drawerClose" aria-label="关闭">×</button>
+    <div id="drawerContent"></div>
+  </aside>
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="src/dashboard.js"></script>
+</body>
+</html>
