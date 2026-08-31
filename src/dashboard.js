@@ -1,5 +1,5 @@
 import { NAV_ITEMS, SECTION_LABELS, SOURCE_GROUPS } from "./constants.js";
-import { downloadText, escapeCsv, formatBeijingTime } from "./utils.js";
+import { downloadText, escapeCsv, formatBeijingTime, matchesSearchQuery } from "./utils.js";
 
 let appState = null;
 let budget = { spentCny: 0, limitCny: 10, percent: 0 };
@@ -121,7 +121,7 @@ function filteredItems() {
   const sort = $("#sortSelect")?.value || "latest";
   const items = sectionItems().filter((item) => {
     const haystack = `${item.titleZh} ${item.titleEn} ${item.summaryZh} ${item.summaryEn} ${item.source} ${(item.topics || []).join(" ")}`.toLowerCase();
-    if (query && !haystack.includes(query)) return false;
+    if (!matchesSearchQuery(haystack, query)) return false;
     if (topic && !(item.topics || []).includes(topic)) return false;
     if (source && item.source !== source) return false;
     if (timeDays && new Date(item.publishedAt).getTime() < Date.now() - timeDays * 86400000) return false;
@@ -464,7 +464,12 @@ $("#syncButton").addEventListener("click", runSync);
 $("#drawerClose").addEventListener("click", closeDetail);
 $("#drawerBackdrop").addEventListener("click", closeDetail);
 $("#notificationButton").addEventListener("click", () => { currentSection = "news"; $("#statusFilter").value = "confirmed"; renderAll(); });
-[$("#searchInput"), $("#topicFilter"), $("#sourceFilter"), $("#timeFilter"), $("#dimensionFilter"), $("#statusFilter"), $("#sortSelect")].forEach((element) => element.addEventListener(element.tagName === "INPUT" ? "input" : "change", () => renderView()));
+const searchInput = $("#searchInput");
+searchInput.addEventListener("input", renderView);
+searchInput.addEventListener("search", renderView);
+searchInput.addEventListener("change", renderView);
+searchInput.addEventListener("keydown", (event) => { if (event.key === "Enter") renderView(); });
+[$("#topicFilter"), $("#sourceFilter"), $("#timeFilter"), $("#dimensionFilter"), $("#statusFilter"), $("#sortSelect")].forEach((element) => element.addEventListener("change", renderView));
 chrome.runtime.onMessage.addListener((message) => { if (message.type === "SYNC_COMPLETE") refreshState().catch(console.error); });
 
 refreshState().catch((error) => {
