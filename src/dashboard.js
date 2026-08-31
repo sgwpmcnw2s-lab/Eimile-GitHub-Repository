@@ -6,6 +6,7 @@ let budget = { spentCny: 0, limitCny: 10, percent: 0 };
 let currentSection = "updates";
 let libraryTab = "saved";
 let currentDetailId = null;
+let noteSaveTimer = null;
 
 const pageMeta = {
   updates: ["AI更新迭代", "追踪全球 AI 公司、模型、产品和开源项目的重要变化。"],
@@ -302,10 +303,20 @@ function openDetail(id, focusNote = false) {
   $("#detailDrawer").setAttribute("aria-hidden", "false");
   $("#analyzeButton").addEventListener("click", () => analyzeCurrentItem(id));
   $("#saveNoteButton").addEventListener("click", () => saveNote(id));
+  $("#noteField").addEventListener("input", () => {
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(() => saveNote(id, { silent: true }).catch(console.error), 600);
+  });
   if (focusNote) setTimeout(() => $("#noteField").focus(), 250);
 }
 
-function closeDetail() {
+async function closeDetail() {
+  clearTimeout(noteSaveTimer);
+  const id = currentDetailId;
+  if (id && $("#noteField")) {
+    try { await saveNote(id, { silent: true }); }
+    catch (error) { showToast(error.message); return; }
+  }
   $("#detailDrawer").classList.remove("open");
   $("#drawerBackdrop").classList.remove("open");
   $("#detailDrawer").setAttribute("aria-hidden", "true");
@@ -328,11 +339,13 @@ async function analyzeCurrentItem(id) {
   }
 }
 
-async function saveNote(id) {
+async function saveNote(id, { silent = false } = {}) {
   const note = $("#noteField").value.trim();
-  await send("PATCH_ITEM", { id, patch: { note } });
-  await refreshState();
-  showToast(note ? "笔记已保存并长期保留" : "笔记已清空");
+  const updated = await send("PATCH_ITEM", { id, patch: { note } });
+  const index = appState.items.findIndex((item) => item.id === id);
+  if (index >= 0) appState.items[index] = updated;
+  if (!silent) showToast(note ? "笔记已保存并长期保留" : "笔记已清空");
+  return updated;
 }
 
 function bindReportEvents() {
