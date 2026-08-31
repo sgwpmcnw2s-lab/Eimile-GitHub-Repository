@@ -23,6 +23,19 @@ function api() {
   return chrome.storage.local;
 }
 
+let itemMutationQueue = Promise.resolve();
+
+function mutateItems(mutator) {
+  const operation = itemMutationQueue.then(async () => {
+    const state = await getState();
+    const result = await mutator(state.items, state);
+    await setState({ items: result.items });
+    return result.value;
+  });
+  itemMutationQueue = operation.catch(() => {});
+  return operation;
+}
+
 export async function getState() {
   const stored = await api().get(DEFAULT_STATE);
   return {
@@ -45,40 +58,44 @@ export async function updateSettings(patch) {
 }
 
 export async function upsertItems(incoming) {
-  const state = await getState();
-  const existing = new Map(state.items.map((item) => [item.id, item]));
-  for (const item of incoming) {
-    const previous = existing.get(item.id) || {};
-    existing.set(item.id, {
-      ...previous,
-      ...item,
-      saved: previous.saved || false,
-      read: previous.read || false,
-      readLater: previous.readLater || false,
-      note: previous.note || ""
-    });
-  }
-  const items = [...existing.values()].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-  await setState({ items });
-  return items;
+  return mutateItems((currentItems) => {
+    const existing = new Map(currentItems.map((item) => [item.id, item]));
+    for (const item of incoming) {
+      const previous = existing.get(item.id) || {};
+      existing.set(item.id, {
+        ...previous,
+        ...item,
+        saved: previous.saved || false,
+        read: previous.read || false,
+        readLater: previous.readLater || false,
+        note: previous.note || ""
+      });
+    }
+    const items = [...existing.values()].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    return { items, value: items };
+  });
 }
 
 export async function patchItem(id, patch) {
-  const state = await getState();
-  const items = state.items.map((item) => item.id === id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item);
-  await setState({ items });
-  return items.find((item) => item.id === id);
+  return mutateItems((currentItems) => {
+    const index = currentItems.findIndex((item) => item.id === id);
+    if (index < 0) throw new Error("内容不存在，保存失败");
+    const updated = { ...currentItems[index], ...patch, updatedAt: new Date().toISOString() };
+    const items = [...currentItems];
+    items[index] = updated;
+    return { items, value: updated };
+  });
 }
 
 export async function pruneItems(retentionDays) {
-  const state = await getState();
-  const cutoff = Date.now() - retentionDays * 86400000;
-  const items = state.items.filter((item) => {
-    const protectedItem = item.saved || item.readLater || item.note || item.isMajorConfirmed;
-    return protectedItem || new Date(item.publishedAt).getTime() >= cutoff;
+  return mutateItems((currentItems) => {
+    const cutoff = Date.now() - retentionDays * 86400000;
+    const items = currentItems.filter((item) => {
+      const protectedItem = item.saved || item.readLater || item.note || item.isMajorConfirmed;
+      return protectedItem || new Date(item.publishedAt).getTime() >= cutoff;
+    });
+    return { items, value: currentItems.length - items.length };
   });
-  await setState({ items });
-  return state.items.length - items.length;
 }
 
 export function currentUsageMonth(date = new Date()) {
