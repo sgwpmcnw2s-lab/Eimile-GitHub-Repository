@@ -22,6 +22,17 @@ export function stripHtml(value = "") {
     .trim();
 }
 
+export function matchesSearchQuery(text = "", query = "") {
+  const normalizedText = String(text).toLowerCase();
+  const normalizedQuery = String(query).trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  if (/[^\x00-\x7F]/.test(normalizedQuery)) return normalizedText.includes(normalizedQuery);
+  return normalizedQuery.split(/\s+/).every((term) => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(normalizedText);
+  });
+}
+
 export function normalizeUrl(value = "") {
   try {
     const url = new URL(value);
