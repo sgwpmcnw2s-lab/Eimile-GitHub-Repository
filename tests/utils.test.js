@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateHeatScore, inferTopics, isQuietHours, normalizeUrl, simpleHash, stripHtml } from "../src/utils.js";
+import { calculateHeatScore, inferTopics, isQuietHours, matchesSearchQuery, normalizeUrl, simpleHash, stripHtml } from "../src/utils.js";
 
 test("simpleHash is deterministic", () => {
   assert.equal(simpleHash("AI radar"), simpleHash("AI radar"));
@@ -13,6 +13,12 @@ test("normalizeUrl removes tracking parameters and fragments", () => {
 
 test("stripHtml returns readable text", () => {
   assert.equal(stripHtml("<p>AI &amp; work</p><script>bad()</script>"), "AI & work");
+});
+
+test("English search matches complete terms instead of fragments inside other words", () => {
+  assert.equal(matchesSearchQuery("dust-tt/dust custom AI agent", "Dust"), true);
+  assert.equal(matchesSearchQuery("industry-leading AI inference", "Dust"), false);
+  assert.equal(matchesSearchQuery("AI 行业更新", "行业"), true);
 });
 
 test("inferTopics identifies common AI themes", () => {
@@ -31,4 +37,3 @@ test("quiet hours span midnight", () => {
   assert.equal(isQuietHours(new Date(2026, 0, 1, 8), 21, 9), true);
   assert.equal(isQuietHours(new Date(2026, 0, 1, 12), 21, 9), false);
 });
-
