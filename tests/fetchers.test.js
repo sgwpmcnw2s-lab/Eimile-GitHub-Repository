@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { inferAudience, inferCourseFormat, isExcludedCourse, parseRss } from "../src/fetchers.js";
+import { inferAudience, inferCourseFormat, isCourseContent, isExcludedCourse, parseRss } from "../src/fetchers.js";
 
 test("parseRss normalizes an RSS item", () => {
   const xml = `<?xml version="1.0"?><rss><channel><item><title><![CDATA[New AI agent course]]></title><link>https://example.com/course?utm_source=test</link><description><![CDATA[Beginner live course for creators with weekly sessions and formal enrollment]]></description><pubDate>Fri, 28 Aug 2026 10:00:00 GMT</pubDate></item></channel></rss>`;
@@ -18,4 +18,11 @@ test("course helpers classify formats and audiences", () => {
   assert.equal(inferCourseFormat("Live AI webinar with registration"), "录播课");
   assert.equal(isExcludedCourse("Live AI webinar with registration"), true);
   assert.deepEqual(inferAudience("AI productivity for office work and creators"), ["职场办公人群", "内容创作者"]);
+});
+
+test("course validation rejects incidental words and unrelated product discussions", () => {
+  assert.equal(isCourseContent("Of course, you are the harness when using AI."), false);
+  assert.equal(isCourseContent("I am an ML engineer showing a new customer research tool."), false);
+  assert.equal(isCourseContent("A self-paced generative AI course for office workers."), true);
+  assert.equal(isCourseContent("Live AI webinar with registration"), false);
 });
