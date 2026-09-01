@@ -14,7 +14,7 @@ globalThis.chrome = {
   }
 };
 
-const { getState, patchItem, upsertItems } = await import("../src/storage.js");
+const { filterItems, getState, patchItem, upsertItems } = await import("../src/storage.js");
 
 test("note remains saved when a source refresh overlaps the write", async () => {
   const original = {
@@ -40,4 +40,15 @@ test("note remains saved when a source refresh overlaps the write", async () => 
 
 test("patching a missing item reports a save failure", async () => {
   await assert.rejects(() => patchItem("missing", { note: "test" }), /保存失败/);
+});
+
+test("filtering items is serialized with concurrent item writes", async () => {
+  await upsertItems([{ id: "invalid-course", publishedAt: "2026-08-31T09:00:00.000Z" }]);
+  await Promise.all([
+    filterItems((item) => item.id !== "invalid-course"),
+    patchItem("same-item", { note: "仍然保留" })
+  ]);
+  const state = await getState();
+  assert.equal(state.items.some((item) => item.id === "invalid-course"), false);
+  assert.equal(state.items.find((item) => item.id === "same-item").note, "仍然保留");
 });
