@@ -98,6 +98,13 @@ export async function pruneItems(retentionDays) {
   });
 }
 
+export async function filterItems(predicate) {
+  return mutateItems((currentItems) => {
+    const items = currentItems.filter(predicate);
+    return { items, value: currentItems.length - items.length };
+  });
+}
+
 export function currentUsageMonth(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit" }).format(date);
 }
