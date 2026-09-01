@@ -1,8 +1,8 @@
 import { APP_NAME } from "./constants.js";
 import { analyzeHighValueItems, analyzeItem, getBudgetStatus } from "./analyzer.js";
-import { fetchAllSources } from "./fetchers.js";
+import { fetchAllSources, isCourseContent } from "./fetchers.js";
 import { generateWeeklyReport } from "./reports.js";
-import { getState, patchItem, pruneItems, saveReport, setState, updateSettings, upsertItems } from "./storage.js";
+import { filterItems, getState, patchItem, pruneItems, saveReport, setState, updateSettings, upsertItems } from "./storage.js";
 import { isQuietHours, simpleHash } from "./utils.js";
 
 const ALARM_SYNC = "ai-radar-sync";
@@ -97,6 +97,7 @@ async function runSync(reason) {
   try {
     const fetched = await fetchAllSources(state.settings);
     await upsertItems(fetched.items);
+    await filterItems((item) => item.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`));
     await reconcileCredibility();
     await pruneItems(state.settings.retentionDays);
     const analyzed = await analyzeHighValueItems(6);
