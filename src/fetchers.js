@@ -58,7 +58,7 @@ export function parseRss(xml, source) {
       courseFormat: source.section === "courses" ? inferCourseFormat(`${title} ${summary}`) : null,
       audience: source.section === "courses" ? inferAudience(`${title} ${summary}`) : []
     });
-  }).filter((item) => item.titleEn && item.url && (source.section !== "courses" || !isExcludedCourse(`${item.titleEn} ${item.summaryEn}`)));
+  }).filter((item) => item.titleEn && item.url && (source.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`)));
 }
 
 function normalizeItem(input) {
@@ -146,7 +146,7 @@ async function fetchHackerNewsSource(source) {
     engagement: Math.min(100, (hit.num_comments || 0) * 2),
     courseFormat: source.section === "courses" ? inferCourseFormat(`${hit.title} ${hit.story_text || ""}`) : null,
     audience: source.section === "courses" ? inferAudience(`${hit.title} ${hit.story_text || ""}`) : []
-  })).filter((item) => item.titleEn && item.url && (source.section !== "courses" || !isExcludedCourse(`${item.titleEn} ${item.summaryEn}`)));
+  })).filter((item) => item.titleEn && item.url && (source.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`)));
 }
 
 async function fetchRedditSource(source) {
@@ -167,7 +167,7 @@ async function fetchRedditSource(source) {
     engagement: Math.min(100, (data.num_comments || 0) * 2),
     courseFormat: inferCourseFormat(`${data.title} ${data.selftext || ""}`),
     audience: inferAudience(`${data.title} ${data.selftext || ""}`)
-  })).filter((item) => !isExcludedCourse(`${item.titleEn} ${item.summaryEn}`));
+  })).filter((item) => isCourseContent(`${item.titleEn} ${item.summaryEn}`));
 }
 
 async function fetchArxivSource(source) {
@@ -206,6 +206,14 @@ export function inferCourseFormat(text = "") {
 
 export function isExcludedCourse(text = "") {
   return /bootcamp|webinar|workshop|cohort-based|cohort course|训练营|工作坊|同期班/i.test(text);
+}
+
+export function isCourseContent(text = "") {
+  const lower = text.toLowerCase();
+  if (isExcludedCourse(lower)) return false;
+  const aiSignal = /\bai\b|artificial intelligence|generative ai|machine learning|\bllm\b|chatgpt|claude|gemini|prompt engineering|智能体|人工智能|大模型/.test(lower);
+  const courseSignal = /ai course|online course|self-paced|instructor-led|course (?:for|on|in|about|teaching)|(?:this|the|my) course|learn(?:ing)? (?:ai|artificial intelligence|machine learning|chatgpt|claude)|class(?:es)? (?:for|on|in|about)|training program|tutorial|curriculum|syllabus|lesson|certificate|specialization|\bmooc\b|课程|录播课|直播课/.test(lower);
+  return aiSignal && courseSignal;
 }
 
 export function inferAudience(text = "") {
