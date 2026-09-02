@@ -87,6 +87,12 @@ export function isQuietHours(date = new Date(), start = 21, end = 9) {
   return start > end ? hour >= start || hour < end : hour >= start && hour < end;
 }
 
+export function isSyncStale(sync = {}, maxAgeMs = 2 * 60 * 1000, now = Date.now()) {
+  if (!sync.running) return false;
+  const startedAt = new Date(sync.lastStartedAt || 0).getTime();
+  return !Number.isFinite(startedAt) || now - startedAt >= maxAgeMs;
+}
+
 export function formatBeijingTime(value, options = {}) {
   return new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
