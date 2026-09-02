@@ -8,14 +8,17 @@ import { isQuietHours, simpleHash } from "./utils.js";
 const ALARM_SYNC = "ai-radar-sync";
 const ALARM_MORNING = "ai-radar-morning-digest";
 const ALARM_WEEKLY = "ai-radar-weekly-report";
+const MAX_SYNC_AGE_MS = 10 * 60 * 1000;
 
 chrome.runtime.onInstalled.addListener(async () => {
+  await recoverInterruptedSync("插件重新加载，上次更新已中断并自动重试");
   await configureAlarms();
   await openDashboard();
   runSync("installed").catch(console.error);
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await recoverInterruptedSync("Chrome重新启动，上次更新已中断并自动重试");
   await configureAlarms();
   runSync("startup").catch(console.error);
 });
@@ -91,7 +94,9 @@ function nextFridayAt22() {
 
 async function runSync(reason) {
   const state = await getState();
-  if (state.sync.running) return { skipped: true, reason: "already-running" };
+  const startedTime = new Date(state.sync.lastStartedAt || 0).getTime();
+  const syncAge = Date.now() - startedTime;
+  if (state.sync.running && Number.isFinite(syncAge) && syncAge < MAX_SYNC_AGE_MS) return { skipped: true, reason: "already-running", sourceResults: state.sync.sourceResults || [] };
   const startedAt = new Date().toISOString();
   await setState({ sync: { ...state.sync, running: true, lastStartedAt: startedAt, lastError: null } });
   try {
@@ -115,6 +120,13 @@ async function runSync(reason) {
     await setState({ sync: { ...latest.sync, running: false, lastError: error.message } });
     throw error;
   }
+}
+
+async function recoverInterruptedSync(message) {
+  const state = await getState();
+  if (!state.sync.running) return false;
+  await setState({ sync: { ...state.sync, running: false, lastError: message } });
+  return true;
 }
 
 async function detectCourseTrends() {
