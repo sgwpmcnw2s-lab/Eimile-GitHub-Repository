@@ -100,7 +100,11 @@ async function runSync(reason) {
   try {
     const fetched = await fetchAllSources(state.settings);
     await upsertItems(fetched.items);
-    await filterItems((item) => item.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`, ["hn-course", "reddit-course"].includes(item.sourceId)));
+    await filterItems((item) => {
+      if (item.section !== "courses") return true;
+      const communitySource = ["hn-course", "reddit-course"].includes(item.sourceId);
+      return isCourseContent(communitySource ? item.titleEn : `${item.titleEn} ${item.summaryEn}`, communitySource);
+    });
     await reconcileCredibility();
     await pruneItems(state.settings.retentionDays);
     const trendReports = await detectCourseTrends();
