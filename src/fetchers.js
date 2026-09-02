@@ -235,17 +235,19 @@ export async function fetchAllSources(settings, onProgress = () => {}) {
     ...SOURCE_GROUPS.arxiv.map((source) => ({ source, run: () => fetchArxivSource(source) }))
   ].filter(({ source }) => settings.sourceEnabled[source.id] !== false);
 
-  const results = [];
-  const items = [];
-  for (const job of jobs) {
+  const settled = await Promise.all(jobs.map(async (job) => {
     try {
       const sourceItems = await job.run();
-      items.push(...sourceItems);
-      results.push({ sourceId: job.source.id, ok: true, count: sourceItems.length });
+      const result = { sourceId: job.source.id, ok: true, count: sourceItems.length };
+      onProgress(result);
+      return { items: sourceItems, result };
     } catch (error) {
-      results.push({ sourceId: job.source.id, ok: false, count: 0, error: error.message });
+      const result = { sourceId: job.source.id, ok: false, count: 0, error: error.name === "AbortError" ? "请求超过15秒" : error.message };
+      onProgress(result);
+      return { items: [], result };
     }
-    onProgress(results.at(-1));
-  }
+  }));
+  const results = settled.map((entry) => entry.result);
+  const items = settled.flatMap((entry) => entry.items);
   return { items, results };
 }
