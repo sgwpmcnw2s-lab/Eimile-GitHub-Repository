@@ -146,7 +146,7 @@ async function fetchHackerNewsSource(source) {
     engagement: Math.min(100, (hit.num_comments || 0) * 2),
     courseFormat: source.section === "courses" ? inferCourseFormat(`${hit.title} ${hit.story_text || ""}`) : null,
     audience: source.section === "courses" ? inferAudience(`${hit.title} ${hit.story_text || ""}`) : []
-  })).filter((item) => item.titleEn && item.url && (source.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`, true)));
+  })).filter((item) => item.titleEn && item.url && (source.section !== "courses" || isCourseContent(item.titleEn, true)));
 }
 
 async function fetchRedditSource(source) {
@@ -167,7 +167,7 @@ async function fetchRedditSource(source) {
     engagement: Math.min(100, (data.num_comments || 0) * 2),
     courseFormat: inferCourseFormat(`${data.title} ${data.selftext || ""}`),
     audience: inferAudience(`${data.title} ${data.selftext || ""}`)
-  })).filter((item) => isCourseContent(`${item.titleEn} ${item.summaryEn}`, true));
+  })).filter((item) => isCourseContent(item.titleEn, true));
 }
 
 async function fetchArxivSource(source) {
