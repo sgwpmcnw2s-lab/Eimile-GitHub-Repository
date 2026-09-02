@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateHeatScore, inferTopics, isQuietHours, matchesSearchQuery, normalizeUrl, simpleHash, stripHtml } from "../src/utils.js";
+import { calculateHeatScore, inferTopics, isQuietHours, isSyncStale, matchesSearchQuery, normalizeUrl, simpleHash, stripHtml } from "../src/utils.js";
 
 test("simpleHash is deterministic", () => {
   assert.equal(simpleHash("AI radar"), simpleHash("AI radar"));
@@ -36,4 +36,11 @@ test("quiet hours span midnight", () => {
   assert.equal(isQuietHours(new Date(2026, 0, 1, 22), 21, 9), true);
   assert.equal(isQuietHours(new Date(2026, 0, 1, 8), 21, 9), true);
   assert.equal(isQuietHours(new Date(2026, 0, 1, 12), 21, 9), false);
+});
+
+test("interrupted sync locks become stale after two minutes", () => {
+  const now = new Date("2026-09-02T10:10:00.000Z").getTime();
+  assert.equal(isSyncStale({ running: true, lastStartedAt: "2026-09-02T10:07:59.000Z" }, 120000, now), true);
+  assert.equal(isSyncStale({ running: true, lastStartedAt: "2026-09-02T10:09:30.000Z" }, 120000, now), false);
+  assert.equal(isSyncStale({ running: false, lastStartedAt: "2026-09-02T10:00:00.000Z" }, 120000, now), false);
 });
