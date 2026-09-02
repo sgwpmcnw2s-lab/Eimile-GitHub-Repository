@@ -471,7 +471,7 @@ searchInput.addEventListener("search", renderView);
 searchInput.addEventListener("change", renderView);
 searchInput.addEventListener("keydown", (event) => { if (event.key === "Enter") renderView(); });
 [$("#topicFilter"), $("#sourceFilter"), $("#timeFilter"), $("#dimensionFilter"), $("#statusFilter"), $("#sortSelect")].forEach((element) => element.addEventListener("change", renderView));
-chrome.runtime.onMessage.addListener((message) => { if (message.type === "SYNC_COMPLETE") refreshState().catch(console.error); });
+chrome.runtime.onMessage.addListener((message) => { if (["SYNC_COMPLETE", "ANALYSIS_COMPLETE"].includes(message.type)) refreshState().catch(console.error); });
 
 refreshState().catch((error) => {
   $("#viewContent").innerHTML = `<div class="empty-state"><h3>插件初始化失败</h3><p>${escapeHtml(error.message)}</p></div>`;
