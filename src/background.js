@@ -3,12 +3,12 @@ import { analyzeHighValueItems, analyzeItem, getBudgetStatus } from "./analyzer.
 import { fetchAllSources, isCourseContent } from "./fetchers.js";
 import { generateWeeklyReport } from "./reports.js";
 import { filterItems, getState, patchItem, pruneItems, saveReport, setState, updateSettings, upsertItems } from "./storage.js";
-import { isQuietHours, simpleHash } from "./utils.js";
+import { isQuietHours, isSyncStale, simpleHash } from "./utils.js";
 
 const ALARM_SYNC = "ai-radar-sync";
 const ALARM_MORNING = "ai-radar-morning-digest";
 const ALARM_WEEKLY = "ai-radar-weekly-report";
-const MAX_SYNC_AGE_MS = 10 * 60 * 1000;
+const MAX_SYNC_AGE_MS = 2 * 60 * 1000;
 
 chrome.runtime.onInstalled.addListener(async () => {
   await recoverInterruptedSync("插件重新加载，上次更新已中断并自动重试");
@@ -34,7 +34,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const handlers = {
-    GET_STATE: () => getState(),
+    GET_STATE: () => getHealthyState(),
     RUN_SYNC: () => runSync("manual"),
     ANALYZE_ITEM: () => analyzeItem(message.id),
     PATCH_ITEM: () => patchItem(message.id, message.patch),
@@ -93,10 +93,8 @@ function nextFridayAt22() {
 }
 
 async function runSync(reason) {
-  const state = await getState();
-  const startedTime = new Date(state.sync.lastStartedAt || 0).getTime();
-  const syncAge = Date.now() - startedTime;
-  if (state.sync.running && Number.isFinite(syncAge) && syncAge < MAX_SYNC_AGE_MS) return { skipped: true, reason: "already-running", sourceResults: state.sync.sourceResults || [] };
+  const state = await getHealthyState();
+  if (state.sync.running) return { skipped: true, reason: "already-running", sourceResults: state.sync.sourceResults || [] };
   const startedAt = new Date().toISOString();
   await setState({ sync: { ...state.sync, running: true, lastStartedAt: startedAt, lastError: null } });
   try {
@@ -105,7 +103,6 @@ async function runSync(reason) {
     await filterItems((item) => item.section !== "courses" || isCourseContent(`${item.titleEn} ${item.summaryEn}`));
     await reconcileCredibility();
     await pruneItems(state.settings.retentionDays);
-    const analyzed = await analyzeHighValueItems(6);
     const trendReports = await detectCourseTrends();
     const freshState = await getState();
     const lastSuccess = freshState.sync.lastSuccessAt ? new Date(freshState.sync.lastSuccessAt) : new Date(Date.now() - 2 * 3600000);
@@ -114,12 +111,23 @@ async function runSync(reason) {
     const sync = { ...freshState.sync, running: false, lastSuccessAt: new Date().toISOString(), lastError: null, sourceResults: fetched.results, lastReason: reason };
     await setState({ sync });
     chrome.runtime.sendMessage({ type: "SYNC_COMPLETE", count: fetched.items.length }).catch(() => {});
-    return { count: fetched.items.length, analyzed: analyzed.length, trendReports: trendReports.length, sourceResults: fetched.results };
+    analyzeHighValueItems(1).then(() => {
+      chrome.runtime.sendMessage({ type: "ANALYSIS_COMPLETE" }).catch(() => {});
+    }).catch(console.error);
+    return { count: fetched.items.length, analysisScheduled: true, trendReports: trendReports.length, sourceResults: fetched.results };
   } catch (error) {
     const latest = await getState();
     await setState({ sync: { ...latest.sync, running: false, lastError: error.message } });
     throw error;
   }
+}
+
+async function getHealthyState() {
+  const state = await getState();
+  if (!isSyncStale(state.sync, MAX_SYNC_AGE_MS)) return state;
+  const sync = { ...state.sync, running: false, lastError: "上次更新被Chrome中断，请重新更新" };
+  await setState({ sync });
+  return { ...state, sync };
 }
 
 async function recoverInterruptedSync(message) {
