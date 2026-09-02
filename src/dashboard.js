@@ -452,6 +452,7 @@ async function runSync() {
   try {
     const result = await send("RUN_SYNC");
     await refreshState();
+    if (result.skipped) return showToast("已有一轮更新正在进行，请稍候");
     const failed = result.sourceResults?.filter((entry) => !entry.ok).length || 0;
     showToast(`更新完成：抓取 ${result.count} 条${failed ? `，${failed}个来源待重试` : ""}`);
   } catch (error) {
