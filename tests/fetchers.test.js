@@ -25,4 +25,6 @@ test("course validation rejects incidental words and unrelated product discussio
   assert.equal(isCourseContent("I am an ML engineer showing a new customer research tool."), false);
   assert.equal(isCourseContent("A self-paced generative AI course for office workers."), true);
   assert.equal(isCourseContent("Live AI webinar with registration"), false);
+  assert.equal(isCourseContent("I built a SaaS for hosting online courses. Later I added unrelated AI features.", true), false);
+  assert.equal(isCourseContent("AI engineer course where every lesson is a runnable project", true), true);
 });
