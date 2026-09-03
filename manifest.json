@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI 全球情报雷达",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "聚合全球 AI 更新、海外 AI 课程热度与重要新闻。",
   "permissions": [
     "storage",
