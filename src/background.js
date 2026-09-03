@@ -100,11 +100,7 @@ async function runSync(reason) {
   try {
     const fetched = await fetchAllSources(state.settings);
     await upsertItems(fetched.items);
-    await filterItems((item) => {
-      if (item.section !== "courses") return true;
-      const communitySource = ["hn-course", "reddit-course"].includes(item.sourceId);
-      return isCourseContent(communitySource ? item.titleEn : `${item.titleEn} ${item.summaryEn}`, communitySource);
-    });
+    await sanitizeCourseItems();
     await reconcileCredibility();
     await pruneItems(state.settings.retentionDays);
     const trendReports = await detectCourseTrends();
@@ -127,11 +123,25 @@ async function runSync(reason) {
 }
 
 async function getHealthyState() {
-  const state = await getState();
+  let state = await getState();
+  if (state.items.some((item) => !isValidCourseItem(item))) {
+    await sanitizeCourseItems();
+    state = await getState();
+  }
   if (!isSyncStale(state.sync, MAX_SYNC_AGE_MS)) return state;
   const sync = { ...state.sync, running: false, lastError: "上次更新被Chrome中断，请重新更新" };
   await setState({ sync });
   return { ...state, sync };
+}
+
+function isValidCourseItem(item) {
+  if (item.section !== "courses") return true;
+  const communitySource = ["hn-course", "reddit-course"].includes(item.sourceId) || /Hacker News|Reddit/i.test(item.source || "");
+  return isCourseContent(communitySource ? item.titleEn : `${item.titleEn} ${item.summaryEn}`, communitySource);
+}
+
+function sanitizeCourseItems() {
+  return filterItems(isValidCourseItem);
 }
 
 async function recoverInterruptedSync(message) {
