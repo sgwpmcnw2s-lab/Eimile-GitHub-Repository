@@ -21,7 +21,7 @@ const sources = [
   {name:'arXiv · AI',url:'https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=25',kind:'atom',section:'news'}
 ];
 
-const clean = s => String(s||'').replace(/<!\[CDATA\[|\]\]>/g,'').replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/\s+/g,' ').trim();
+const clean = s => String(s||'').replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/\s+/g,' ').trim();
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0,20);
 const host = u => {try{return new URL(u).hostname}catch{return ''}};
 const canonical = u => {try{const x=new URL(u);['utm_source','utm_medium','utm_campaign','ref','source'].forEach(k=>x.searchParams.delete(k));x.hash='';return x.toString()}catch{return u}};
@@ -58,22 +58,22 @@ function reconcile(items){
   for(const xs of groups.values()){const independent=new Set(xs.map(i=>i.source));if(independent.size>=2)for(const i of xs){i.status='confirmed';i.confirmationReason=`同一事件已由 ${[...independent].join('、')} 等独立来源佐证。`}}
 }
 function fallbackAnalysis(i){
-  if(i.summaryZh)return i;i.titleZh=i.title;i.summaryZh=i.summaryEn?`原文要点：${i.summaryEn}`:'已收录该公开信号，建议打开原文核查详情。';
+  if(i.analysisProvider==='deepseek')return i;i.titleZh=i.title;i.summaryZh=i.summaryEn?`尚未配置 DeepSeek 中文分析。英文原文摘录：${i.summaryEn}`:'已收录该公开信号，建议打开原文核查详情。';i.analysisProvider='rules';
   if(i.section==='courses'){i.painPoints=['学习者需要更清晰的实践路径与可验证成果'];i.reviewInsights=['当前公开互动样本有限，不能据此推断实际报名量或销量']}
   return i
 }
 async function deepseekAnalyze(items){
   const key=process.env.DEEPSEEK_API_KEY;if(!key)return {items:items.map(fallbackAnalysis),cost:0};
-  const targets=items.filter(i=>!i.titleZh).sort((a,b)=>b.importance-a.importance).slice(0,6);if(!targets.length)return {items,cost:0};
+  const targets=items.filter(i=>i.analysisProvider!=='deepseek').sort((a,b)=>b.importance-a.importance).slice(0,6);if(!targets.length)return {items,cost:0};
   const prompt=`你是AI情报编辑。只根据输入，不补造事实。为每项返回JSON数组，字段id,titleZh,summaryZh,summaryEn,painPoints,reviewInsights,tags。中文摘要80-140字；英文摘要1-2句；课程项才分析痛点和评论信号，样本不足要明说。输入：${JSON.stringify(targets.map(({id,title,summaryEn,section,source,url})=>({id,title,summaryEn,section,source,url})))}`;
-  try{const r=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${key}`},body:JSON.stringify({model:'deepseek-chat',response_format:{type:'json_object'},messages:[{role:'system',content:'严格输出 {"items": [...]} 的JSON，不使用Markdown。'},{role:'user',content:prompt}],temperature:.2,max_tokens:3000})});if(!r.ok)throw new Error(`DeepSeek HTTP ${r.status}`);const j=await r.json(),parsed=JSON.parse(j.choices?.[0]?.message?.content||'{"items":[]}'),byId=new Map((parsed.items||[]).map(x=>[x.id,x]));for(const i of items)Object.assign(i,byId.get(i.id)||{});const tokens=(j.usage?.prompt_tokens||0)+(j.usage?.completion_tokens||0);return {items:items.map(fallbackAnalysis),cost:Number((tokens/1e6*2).toFixed(4))}}catch(e){console.error('DeepSeek fallback:',e.message);return {items:items.map(fallbackAnalysis),cost:0}}
+  try{const r=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${key}`},body:JSON.stringify({model:'deepseek-chat',response_format:{type:'json_object'},messages:[{role:'system',content:'严格输出 {"items": [...]} 的JSON，不使用Markdown。'},{role:'user',content:prompt}],temperature:.2,max_tokens:3000})});if(!r.ok)throw new Error(`DeepSeek HTTP ${r.status}`);const j=await r.json(),parsed=JSON.parse(j.choices?.[0]?.message?.content||'{"items":[]}'),byId=new Map((parsed.items||[]).map(x=>[x.id,x]));for(const i of items){const a=byId.get(i.id);if(a)Object.assign(i,a,{analysisProvider:'deepseek'})}const tokens=(j.usage?.prompt_tokens||0)+(j.usage?.completion_tokens||0);return {items:items.map(fallbackAnalysis),cost:Number((tokens/1e6*2).toFixed(4))}}catch(e){console.error('DeepSeek fallback:',e.message);return {items:items.map(fallbackAnalysis),cost:0}}
 }
 function trends(items){const recent=items.filter(i=>Date.now()-new Date(i.publishedAt)<7*864e5),counts={};for(const i of recent)for(const t of i.tags||[])counts[t]=(counts[t]||0)+1;return Object.entries(counts).filter(([,n])=>n>=4).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([topic,count])=>({topic,count,section:recent.find(i=>(i.tags||[]).includes(topic))?.section||'news'}))}
 
 let previous={items:[],aiCostCny:0};try{previous=JSON.parse(await fs.readFile(OUT,'utf8'))}catch{}
 const results=await Promise.all(sources.map(fetchSource));
 const previousById=new Map((previous.items||[]).map(i=>[i.id,i]));
-let items=results.flatMap(r=>r.items).filter(i=>Date.now()-new Date(i.publishedAt)<=RETENTION_MS).map(i=>({...i,...(previousById.get(i.id)||{}),heat:i.heat,publishedAt:i.publishedAt}));
+let items=results.flatMap(r=>r.items).filter(i=>Date.now()-new Date(i.publishedAt)<=RETENTION_MS).map(i=>{const p=previousById.get(i.id);return p?.analysisProvider==='deepseek'?{...i,titleZh:p.titleZh,summaryZh:p.summaryZh,summaryEn:p.summaryEn,painPoints:p.painPoints,reviewInsights:p.reviewInsights,tags:p.tags,analysisProvider:'deepseek'}:i});
 for(const old of previous.items||[])if(Date.now()-new Date(old.publishedAt)<=RETENTION_MS&&(old.section!=='courses'||courseStrict(`${old.title} ${old.summaryEn||''}`))&&!items.some(i=>i.id===old.id))items.push(old);
 items=[...new Map(items.map(i=>[i.id,i])).values()];reconcile(items);
 const analyzed=await deepseekAnalyze(items);items=analyzed.items.sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
