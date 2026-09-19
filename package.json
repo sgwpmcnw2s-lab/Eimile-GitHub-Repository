@@ -1,12 +1,12 @@
 {
   "name": "eimile-global-ai-radar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "个人使用的全球 AI 情报 Chrome 插件 MVP",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "check": "node scripts/validate.mjs"
-  }
+    "refresh": "node scripts/refresh-data.mjs",
+    "test": "node --test tests/*.test.js tests/*.test.mjs",
+    "check": "node scripts/validate.mjs && node --check docs/app.js && node --check scripts/refresh-data.mjs"
+  },
+  "description": "AI 全球情报雷达：独立网页与 Chrome 扩展"
 }
-
