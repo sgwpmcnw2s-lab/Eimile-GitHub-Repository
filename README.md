@@ -1,63 +1,66 @@
 # AI 全球情报雷达
 
-个人使用的 Chrome Manifest V3 插件，用于聚合全球 AI 更新、海外 AI 课程信号与重大 AI 新闻，并通过 DeepSeek 生成中英文摘要、课程痛点和选题机会。
+聚合全球 AI 更新、海外 AI 课程信号与重大 AI 新闻。当前推荐使用普通独立网页，旧版 Chrome 扩展源码仍保留。
 
-## MVP 功能
+## 独立网页版本（推荐）
 
-- 点击插件图标打开完整的新标签页数据看板
-- AI更新迭代、海外AI课程、AI新闻播报三个板块
-- GitHub、AI公司官方博客、MIT News、arXiv、Hacker News、Reddit、Class Central 等公开来源
-- 每2小时同步；Chrome重启后自动补抓
-- URL规范化、内容指纹去重、普通数据保留30天
-- 官方来源或多来源佐证的可信状态
-- DeepSeek中英文摘要与结构化课程分析
-- 每月10元默认预算、用量统计和阈值提醒
-- 搜索、筛选、收藏、已读、稍后阅读、个人笔记
-- 每周课程机会报告与主题突增专项报告
-- 中文PDF打印、Markdown和CSV导出
-- 21:00–09:00免打扰与早间汇总
+- 通过 GitHub Pages 直接访问，不需要安装扩展
+- AI更新迭代、海外AI课程、AI新闻播报、我的资料库、设置
+- 中英文摘要与英文原文链接
+- 搜索以及主题、来源、时间、分类、状态筛选
+- 收藏、已读、稍后阅读和笔记（仅保存在当前浏览器）
+- 课程热度、录播/直播、目标人群、用户痛点与机会报告
+- 中文 Markdown、CSV、打印/PDF 导出
+- GitHub Actions 每2小时抓取公开数据，保留30天
+- 可选 DeepSeek 自动分析；API Key只使用 GitHub加密 Secret
 
-## 快速安装
+网页地址：<https://sgwpmcnw2s-lab.github.io/Eimile-GitHub-Repository/>
 
-1. 下载或克隆本仓库到 Mac 本地文件夹。
-2. 打开 Chrome，在地址栏输入 `chrome://extensions`。
-3. 打开右上角“开发者模式”。
-4. 点击“加载已解压的扩展程序”，选择本仓库根目录。
-5. 固定“AI 全球情报雷达”图标并点击打开看板。
-6. 进入“设置”，填写自己的 DeepSeek API Key并测试连接。
-7. 点击“立即更新”完成首次公开数据同步。
+### 首次上线
 
-更完整的操作说明见 [docs/INSTALL.md](docs/INSTALL.md) 和 [docs/USER_GUIDE.md](docs/USER_GUIDE.md)。
+1. 将仓库设为 Public。
+2. 打开 `Settings → Pages`，将 Source 设为 `GitHub Actions`。
+3. 打开 `Actions → Refresh public AI data → Run workflow`，执行首次自动抓取。
 
-## 数据与分析口径
+### 可选：配置 DeepSeek
 
-- 只抓取公开可访问的数据，不绕过登录、付费墙或访问限制。
-- “已确认”表示信息来自官方来源，或同一事件至少有两个独立可信来源；匹配算法仍可能需要人工核查。
-- 课程热度分综合公开的互动、讨论、时效、来源可靠性等字段。平台未公开的报名量或销量不会被虚构。
-- 用户痛点和课程机会属于基于公开样本的分析判断，不等同于市场事实。
-- 所有内容均保留原文链接，便于回到原始来源核查。
+在 `Settings → Secrets and variables → Actions` 新建仓库 Secret：
 
-## 隐私与安全
+- Name：`DEEPSEEK_API_KEY`
+- Secret：你的 DeepSeek API Key
 
-- DeepSeek API Key只保存在 `chrome.storage.local`，不会写入仓库。
-- 原文只有在进行AI分析时才会发送给DeepSeek。
-- 收藏、笔记、报告和设置默认只保存在本机Chrome配置中。
-- `.gitignore` 已排除常见密钥和环境文件；提交前仍应检查变更。
+未配置时公开数据仍会更新，只使用规则摘要。不要把密钥写入代码、网页或聊天截图。
 
-详见 [docs/PRIVACY.md](docs/PRIVACY.md)。
+## 数据与判断口径
+
+- 只读取公开可访问来源，不绕过登录、付费墙或访问限制。
+- “已确认”表示来自官方来源，或同一事件至少有两个独立可信来源。
+- “待验证”表示暂未达到上述标准，不代表消息一定错误。
+- 课程热度综合公开互动、时效和来源质量，不等于报名量或销量。
+- 用户痛点与课程机会是基于公开样本的分析判断；样本不足时会明确标注。
+- 个别来源失效不会阻塞整体更新，失败状态会记录在数据文件中。
+
+## 隐私
+
+- 独立网页的收藏、已读、稍后阅读和笔记只保存在当前浏览器。
+- DeepSeek Key保存在 GitHub Actions Secrets，不进入前端文件。
+- 原文仅在启用 DeepSeek 分析时用于生成摘要。
 
 ## 开发检查
-
-项目不依赖前端构建工具。安装前可运行：
 
 ```bash
 npm test
 npm run check
+npm run refresh
 ```
+
+网页位于 `docs/`；数据更新脚本位于 `scripts/refresh-data.mjs`；自动任务位于 `.github/workflows/`。
+
+## Chrome 扩展（旧版）
+
+扩展仍可通过 `manifest.json` 加载，但不再作为主要使用方式。独立网页解决了浏览器跨域、后台任务易卡住和扩展重载等问题。
 
 ## 第二阶段
 
-- 新建独立 Obsidian 库“AI全球情报库”并自动/手动同步
-- 通过 Mac“邮件”App和163邮箱在周五22:00发送周报
-- 扩展更多课程平台与可选认证数据源
-
+- 新建独立 Obsidian 库“AI全球情报库”并同步收藏、笔记与报告
+- 通过163邮箱发送周五22:00周报
