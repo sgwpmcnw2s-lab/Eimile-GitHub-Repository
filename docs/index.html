@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AI 全球情报雷达：AI 更新、海外课程与重大新闻。">
+  <title>AI 全球情报雷达</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#updates" aria-label="AI 全球情报雷达首页">
+        <span class="brand-mark">◎</span><span><strong>AI 全球雷达</strong><small>Global AI Intelligence</small></span>
+      </a>
+      <nav id="nav" aria-label="主导航">
+        <button data-view="updates" class="active"><span>✦</span>AI更新迭代</button>
+        <button data-view="courses"><span>▣</span>海外AI课程</button>
+        <button data-view="news"><span>◉</span>AI新闻播报</button>
+        <button data-view="library"><span>◇</span>我的资料库</button>
+        <button data-view="settings"><span>⌘</span>设置</button>
+      </nav>
+      <div class="sync-card">
+        <div><i id="syncDot"></i><strong id="syncText">正在读取数据</strong></div>
+        <small id="syncTime">—</small>
+        <button id="refreshBtn">刷新页面数据</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><span class="eyebrow">GLOBAL AI INTELLIGENCE</span><h1 id="pageTitle">AI更新迭代</h1><p id="pageDescription">追踪全球 AI 公司、模型、产品和开源项目的重要变化。</p></div>
+        <div class="top-actions"><div class="budget">本月 AI <strong id="budgetUsed">¥0.00 / ¥10</strong><span><i id="budgetBar"></i></span></div><button id="notifyBtn" title="通知设置">🔔</button></div>
+      </header>
+
+      <section id="dashboard">
+        <div class="stats" id="stats"></div>
+        <div class="filters">
+          <label class="search"><span>⌕</span><input id="search" placeholder="搜索标题、摘要、来源或主题"></label>
+          <select id="topicFilter"><option value="">全部主题</option></select>
+          <select id="sourceFilter"><option value="">全部来源</option></select>
+          <select id="timeFilter"><option value="all">全部时间</option><option value="24h">24小时</option><option value="7d">7天</option><option value="30d">30天</option></select>
+          <select id="categoryFilter"><option value="">全部分类</option></select>
+          <select id="statusFilter"><option value="">全部状态</option><option value="confirmed">已确认</option><option value="pending">待验证</option><option value="unread">未读</option></select>
+          <select id="sortFilter"><option value="newest">最新发布</option><option value="heat">热度最高</option><option value="importance">重要度最高</option></select>
+        </div>
+        <div id="trendBanner" class="trend-banner hidden"></div>
+        <div id="cards" class="cards" aria-live="polite"></div>
+      </section>
+
+      <section id="settingsPanel" class="panel hidden"></section>
+    </main>
+  </div>
+
+  <dialog id="detailDialog"><article><button class="close" aria-label="关闭">×</button><div id="detailContent"></div></article></dialog>
+  <dialog id="noteDialog"><article class="note-modal"><button class="close" aria-label="关闭">×</button><h2>添加笔记</h2><p id="noteTitle"></p><textarea id="noteText" rows="8" placeholder="记录你的判断、选题灵感或后续动作…"></textarea><button id="saveNote" class="primary">保存笔记</button></article></dialog>
+  <div id="toast" role="status"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
