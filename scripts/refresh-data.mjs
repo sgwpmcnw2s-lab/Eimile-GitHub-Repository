@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 
 const OUT = new URL('../docs/data/feed.json', import.meta.url);
+const OUT_JS = new URL('../docs/data/feed-data.js', import.meta.url);
 const RETENTION_MS = 30*24*60*60*1000;
 const now = new Date();
 const monthAgo = new Date(Date.now()-30*24*60*60*1000).toISOString().slice(0,10);
@@ -79,4 +80,5 @@ items=[...new Map(items.map(i=>[i.id,i])).values()];reconcile(items);
 const analyzed=await deepseekAnalyze(items);items=analyzed.items.sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
 const payload={generatedAt:now.toISOString(),aiCostCny:Number((Number(previous.aiCostCny||0)+analyzed.cost).toFixed(4)),sourceStatus:results.map(({source,ok,count,error})=>({source,ok,count,error})),trends:trends(items),items};
 await fs.mkdir(new URL('../docs/data/',import.meta.url),{recursive:true});await fs.writeFile(OUT,JSON.stringify(payload,null,2)+'\n');
+await fs.writeFile(OUT_JS,`window.__AI_RADAR_DATA__=${JSON.stringify(payload)};\n`);
 console.log(`Wrote ${items.length} items from ${results.filter(r=>r.ok).length}/${results.length} sources.`);
